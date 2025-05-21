@@ -1,0 +1,132 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from statsmodels.tsa.arima.model import ARIMA
+import warnings
+warnings.filterwarnings("ignore")
+
+# 🔹 Load and preprocess the data
+df = pd.read_csv('cleaned_aqi_india_data.csv')
+df.replace('NA', pd.NA, inplace=True)
+df['AQI_Value'] = pd.to_numeric(df['AQI_Value'], errors='coerce')
+df['Last_Update'] = pd.to_datetime(df['Last_Update'], errors='coerce')
+
+pollutants = ['PM2.5_Avg', 'PM10_Avg', 'NO2_Avg', 'SO2_Avg', 'CO_Avg', 'OZONE_Avg', 'NH3_Avg']
+for col in pollutants:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+df = df.dropna(subset=['AQI_Value'] + pollutants)
+
+# ----------------------------------------
+# 🎯 MODEL 1: Predict AQI from Pollutants
+# ----------------------------------------
+X = df[pollutants]
+y = df['AQI_Value']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+r2 = r2_score(y_test, y_pred)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+print("\n🎯 Random Forest Model Performance:")
+print(f"R² Score: {r2:.3f}")
+print(f"RMSE: {rmse:.2f}")
+
+# 📈 Actual vs Predicted Plot
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=y_test, y=y_pred)
+plt.xlabel("Actual AQI")
+plt.ylabel("Predicted AQI")
+plt.title("Actual vs Predicted AQI")
+plt.grid(True)
+plt.show()
+plt.savefig("Actual vs Predicted AQI.png")  # Save the plot to a file
+
+
+# ----------------------------------------
+# 🏙️ Pollution Ranking (Most & Least Polluted)
+# ----------------------------------------
+avg_aqi = df.groupby('City')['AQI_Value'].mean().sort_values(ascending=False)
+print("\n😷 Most Polluted Cities:\n", avg_aqi.head(5))
+print("\n🌿 Least Polluted Cities:\n", avg_aqi.tail(5))
+
+# ----------------------------------------
+# ⏳ Time Series Forecasting using ARIMA
+# ----------------------------------------
+# Find the city with most AQI records
+valid_df = df.dropna(subset=['Last_Update', 'AQI_Value'])
+city_counts = valid_df.groupby('City')['AQI_Value'].count().sort_values(ascending=False)
+top_city = city_counts.index[0]
+
+print(f"\n🔮 Forecasting AQI for: {top_city}")
+
+# Prepare time series data
+ts_df = valid_df[valid_df['City'] == top_city].copy()
+ts_df = ts_df[['Last_Update', 'AQI_Value']].set_index('Last_Update')
+ts_df = ts_df.resample('D').mean().dropna()  # daily average
+
+# Fit ARIMA model (simple config)
+model_arima = ARIMA(ts_df, order=(1, 1, 1))
+model_fit = model_arima.fit()
+
+# Forecast next 7 days
+forecast = model_fit.forecast(steps=7)
+print("\n📅 AQI Forecast for next 7 days:\n", forecast)
+
+# Plot the forecast
+plt.figure(figsize=(10, 5))
+plt.plot(ts_df[-30:], label='Last 30 Days AQI')
+plt.plot(forecast, label='Forecast (Next 7 Days)', linestyle='--', marker='o', color='red')
+plt.title(f"AQI Forecast using ARIMA for {top_city}")
+plt.xlabel("Date")
+plt.ylabel("AQI")
+plt.legend()
+plt.grid(True)
+plt.show()
+plt.savefig("AQI Forecast for next 7 days.png")  # Save the plot to a file
+
+import pandas as pd
+import folium
+from IPython.display import display
+
+# Ensure numeric columns
+df['AQI_Value'] = pd.to_numeric(df['AQI_Value'], errors='coerce')
+df['Latitude'] = pd.to_numeric(df['Latitude'], errors='coerce')
+df['Longitude'] = pd.to_numeric(df['Longitude'], errors='coerce')
+
+# Clean data
+map_df = df.dropna(subset=['State', 'AQI_Value', 'Latitude', 'Longitude'])
+
+# Group state-wise
+state_aqi = map_df.groupby('State')['AQI_Value'].mean().reset_index()
+state_coords = map_df.groupby('State')[['Latitude', 'Longitude']].first().reset_index()
+state_map_data = pd.merge(state_aqi, state_coords, on='State')
+
+# Create folium map
+india_map = folium.Map(location=[22.9734, 78.6569], zoom_start=5)
+
+# Add AQI circles
+for _, row in state_map_data.iterrows():
+    color = (
+        'green' if row['AQI_Value'] <= 50 else
+        'orange' if row['AQI_Value'] <= 100 else
+        'red' if row['AQI_Value'] <= 200 else
+        'purple'
+    )
+    folium.CircleMarker(
+        location=[row['Latitude'], row['Longitude']],
+        radius=10,
+        color=color,
+        fill=True,
+        fill_color=color,
+        fill_opacity=0.7,
+        popup=f"{row['State']}<br>AQI: {row['AQI_Value']:.1f}"
+    ).add_to(india_map)
+
+# Show map inline in notebook
+display(india_map)
