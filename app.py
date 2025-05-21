@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 API_KEY = "2e7eb280bf0879f9214dc0a552335579e56a841c"
-cities = ["delhi", "mumbai", "kolkata", "chennai", "lucknow", "bangalore", "hyderabad", "ahmedabad"]
+cities = ["delhi", "mumbai", "kolkata", "chennai", "lucknow", "bangalore", "hyderabad", "ahmedabad","pune"]
 
 st.set_page_config(page_title="Real-Time AQI Dashboard", layout="centered")
 st.title("🌫️ Real-Time AQI Dashboard")
