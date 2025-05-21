@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 API_KEY = "2e7eb280bf0879f9214dc0a552335579e56a841c"
 
 # Supported Cities
-cities = ["delhi", "mumbai", "kolkata", "chennai", "lucknow", "bangalore", "hyderabad", "ahmedabad"]
+cities = ["delhi", "mumbai", "kolkata", "chennai", "lucknow", "bangalore", "hyderabad", "ahmedabad","pune"]
 
 # Streamlit page config
 st.set_page_config(page_title="Real-Time AQI Dashboard", layout="centered")
