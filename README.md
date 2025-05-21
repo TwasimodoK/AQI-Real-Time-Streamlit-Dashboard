@@ -39,5 +39,5 @@ We’ve included a default API token in `app.py`, but you can use your own:
 1. Get a free API token from: [https://aqicn.org/data-platform/token/](https://aqicn.org/data-platform/token/)
 2. Replace the `API_KEY` in the Python script:
 ```python
-API_KEY = "your_personal_token_here"
+API_KEY = "2e7eb280bf0879f9214dc0a552335579e56a841c"
 
