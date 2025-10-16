@@ -2,13 +2,14 @@
 import os
 import streamlit as st
 import requests
+import plotly.graph_objects as go
 
 # Streamlit setup
 st.set_page_config(page_title="Real-Time AQI Dashboard", layout="centered")
-st.title("🌫️ Real-Time AQI Dashboard")
+st.title("🌫️ Real-Time AQI Dashboard (India)")
 
 # --------------------------------
-# 1️⃣ Get API Key (from secrets or env variable)
+# 1️⃣ API Key Setup (from secrets)
 # --------------------------------
 API_KEY = os.environ.get("AQICN_TOKEN", "")
 if API_KEY == "":
@@ -72,10 +73,10 @@ def classify_aqi(aqi):
         return "Severe", "maroon"
 
 # --------------------------------
-# 5️⃣ Main Action - Fetch and Display AQI
+# 5️⃣ Main Action - Fetch and Display AQI + Gauge
 # --------------------------------
 if st.button("Fetch Latest AQI"):
-    with st.spinner("Fetching data..."):
+    with st.spinner("Fetching latest data..."):
         result = fetch_aqi(city, API_KEY)
 
     if "error" in result:
@@ -89,5 +90,28 @@ if st.button("Fetch Latest AQI"):
         st.metric("Dominant Pollutant", result["dominant"])
         st.write("Last Updated:", result["time"])
         st.markdown(f"### AQI Category: <span style='color:{color};font-weight:bold'>{category}</span>", unsafe_allow_html=True)
+
+        # --------------------------------
+        # 6️⃣ Gauge Visualization
+        # --------------------------------
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=aqi if aqi is not None else 0,
+            title={'text': f"AQI Status: {category}"},
+            domain={'x': [0, 1], 'y': [0, 1]},
+            gauge={
+                'axis': {'range': [0, 500]},
+                'bar': {'color': color},
+                'steps': [
+                    {'range': [0, 50], 'color': 'green'},
+                    {'range': [51, 100], 'color': 'yellow'},
+                    {'range': [101, 200], 'color': 'orange'},
+                    {'range': [201, 300], 'color': 'red'},
+                    {'range': [301, 400], 'color': 'purple'},
+                    {'range': [401, 500], 'color': 'maroon'}
+                ],
+            }
+        ))
+        st.plotly_chart(fig, use_container_width=True)
 
 
